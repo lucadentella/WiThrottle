@@ -39,6 +39,12 @@
 #define NEWLINE 			'\n'
 #define CR 					'\r'
 
+typedef enum Turnout {
+    Thrown = 0,
+    Closed = 1,
+    Toggle = 2,
+} Turnout;
+
 typedef enum Direction {
     Reverse = 0,
     Forward = 1
@@ -78,6 +84,7 @@ class WiThrottleDelegate
     virtual void heartbeatConfig(int seconds) { }
 
     virtual void receivedFunctionState(uint8_t func, bool state) { }
+    virtual void receivedTurnoutState(uint8_t id, Turnout state) { }
 
     virtual void receivedSpeed(int speed) { }             // Vnnn
     virtual void receivedDirection(Direction dir) { }     // R{0,1}
@@ -131,6 +138,8 @@ class WiThrottle
 	
 	void setTrackPower(TrackPower state);
 
+	void setTurnout(int id, Turnout state);
+
     void emergencyStop();
 
     
@@ -156,6 +165,7 @@ class WiThrottle
 	void processRosterList(char *c, int len);
     void processTrackPower(char *c, int len);
     void processFunctionState(const String& functionData);
+    void processTurnoutState(char *c, int len);
     void processSpeedSteps(const String& speedStepData);
     void processDirection(const String& speedStepData);
     void processSpeed(const String& speedData);

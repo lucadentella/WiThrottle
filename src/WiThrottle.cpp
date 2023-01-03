@@ -173,6 +173,7 @@ WiThrottle::sendCommand(String cmd)
         if (server) {
             stream->println("");
         }
+        stream->flush();
         console->print("==> "); console->println(cmd);
     }
 }
@@ -315,6 +316,10 @@ WiThrottle::processCommand(char *c, int len)
         processTrackPower(c+3, len-3);
         return true;
     }
+    else if (len > 3 && c[0]=='P' && c[1]=='T' && c[2]=='A') {
+        processTurnoutState(c+3, len-3);
+        return true;
+    }
     else if (len > 1 && c[0]=='*') {
         return processHeartbeat(c+1, len-1);
     }
@@ -358,6 +363,7 @@ WiThrottle::processCommand(char *c, int len)
         console->printf("unknown command '%s'\n", c);
         // all other commands are explicitly ignored
     }
+    return changed;
 }
 
 
@@ -528,6 +534,26 @@ WiThrottle::processFunctionState(const String& functionData)
         }
     }
 }
+
+void
+WiThrottle::processTurnoutState(char *c, int len)
+{
+    String remainder(c);  // the leading "PTA" was not passed to this method
+
+    if (delegate) {
+        Turnout state = remainder[0] == '2' ? Closed : Thrown;
+        String idStr = remainder.substring(1);
+        uint8_t idNum = idStr.toInt();
+
+        if (idNum == 0 && idStr != "0") {
+            // error in parsing
+        }
+        else {
+            delegate->receivedTurnoutState(idNum, state);
+        }
+    }
+}
+
 
 
 void
@@ -816,6 +842,30 @@ WiThrottle::emergencyStop()
     String cmd = "MTA*";
     cmd.concat(PROPERTY_SEPARATOR);
     cmd.concat("X");
+
+    sendCommand(cmd);
+}
+
+void
+WiThrottle::setTurnout(int id, Turnout state) {
+    if (id < 1 || id > 99) {
+        return;
+    }
+
+    String cmd = "PTA";
+
+    if (state == Thrown) {
+        cmd += "T";
+    } 
+    else
+    if (state == Closed) {
+        cmd += "C";
+    }
+    else {
+        cmd += "2";
+    }
+
+    cmd += id;
 
     sendCommand(cmd);
 }
